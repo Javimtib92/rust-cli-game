@@ -13,7 +13,7 @@ fn main() -> io::Result<()> {
 
     let mut previous_frame_time = Instant::now();
 
-    let mut current_position: Vec<i32> = vec![0, 0];
+    let mut current_position = [0, 0];
     
     loop {
         if let Err(e) = update(&mut current_position) {
@@ -38,27 +38,31 @@ fn main() -> io::Result<()> {
     disable_raw_mode()
 }
 
-fn update(position: &mut Vec<i32>) -> io::Result<()> {
+fn update(position: &mut [i32; 2]) -> io::Result<()> {
     match read_keyboard_events() {
         Ok(key_code) => {
-            match key_code {
-                KeyCode::Up => {
-                    position[1] += 1;
-                },
-                KeyCode::Down => {
-                    position[1] -= 1;
-                },
-                KeyCode::Right => {
-                    position[0] += 1;
-                },
-                KeyCode::Left => {
-                    position[0] -= 1;
-                },
-                _ => ()
-            };
+            update_position(position, key_code);
             Ok(())
         },
         Err(e) => Err(e)
+    }
+}
+
+fn update_position(position: &mut [i32; 2], key_code: KeyCode) {
+    match key_code {
+        KeyCode::Up => {
+            position[1] += 1;
+        },
+        KeyCode::Down => {
+            position[1] -= 1;
+        },
+        KeyCode::Right => {
+            position[0] += 1;
+        },
+        KeyCode::Left => {
+            position[0] -= 1;
+        },
+        _ => ()
     }
 }
 
