@@ -21,8 +21,6 @@ fn main() -> io::Result<()> {
             break;
         }
 
-        println!("{:?}", current_position);
-
         paint();
 
         let now = Instant::now();
@@ -71,7 +69,7 @@ fn paint() {
 }
 
 fn read_keyboard_events() -> io::Result<KeyCode> {
-    if poll(Duration::from_millis(500))? {
+    if poll(Duration::from_secs(1) / FPS)? {
         // It's guaranteed that the `read()` won't block when the `poll()`
         // function returns `true`
         let event = read()?;
