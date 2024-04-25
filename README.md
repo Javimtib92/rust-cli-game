@@ -2,6 +2,9 @@
 
 This project is a fun project I'm building to play around with Rust while learning.
 
+> ⚠️ Right now this code only works on terminals like kitty terminal due to the following flag: https://docs.rs/crossterm/latest/crossterm/event/struct.PushKeyboardEnhancementFlags.html#
+
+
 ## Project Goals
 - Learn the fundamentals of Rust programming language.
 - Gain practical experience by implementing various Rust concepts.
