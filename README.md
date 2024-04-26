@@ -2,8 +2,14 @@
 
 This project is a fun project I'm building to play around with Rust while learning.
 
-> ⚠️ Right now this code only works on terminals like kitty terminal due to the following flag: https://docs.rs/crossterm/latest/crossterm/event/struct.PushKeyboardEnhancementFlags.html#
+## Requirements
+- SDL2
 
+## Install SLD2 on Mac
+
+```bash
+brew install sdl2
+```
 
 ## Project Goals
 - Learn the fundamentals of Rust programming language.

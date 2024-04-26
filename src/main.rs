@@ -1,9 +1,8 @@
-use std::{io::{self, stdout}, thread, time::{Duration, Instant}};
-
-use crossterm::{cursor::MoveTo, event::{poll, read, Event, KeyCode, KeyEventKind, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags}, execute, style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor}, terminal::{disable_raw_mode, enable_raw_mode, Clear}};
+use std::{io::{self}, thread, time::{Duration, Instant}};
 
 mod map;
 use map::MAP;
+use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::{Point, Rect}, render::Canvas, Sdl};
 
 const FPS: u32 = 60;
 const FORCE: f64 = 2.0;
@@ -11,17 +10,8 @@ const MASS: f64 = 0.5;
 const ACCELERATION: f64 = FORCE / MASS;
 const DT: f64 = 0.01;
 
-fn main() -> io::Result<()> {
+fn main() {
     println!("Welcome to the Rust CLI game");
-    
-    enable_raw_mode()?;
-
-    execute!(
-        stdout(),
-        PushKeyboardEnhancementFlags(
-            KeyboardEnhancementFlags::REPORT_EVENT_TYPES
-        )
-    )?;
 
     let mut t = 0.0;
 
@@ -36,7 +26,20 @@ fn main() -> io::Result<()> {
     let mut current_position = [0, 0];
     let mut velocity = [0.0, 0.0];
     
+
+    let sdl_context = sdl2::init().unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
+
+    let window = video_subsystem.window("rust-sdl2 demo", 800, 600)
+        .position_centered()
+        .build()
+        .unwrap();
+
+    let mut canvas = window.into_canvas().build().unwrap();
+
     'game_loop: loop {
+        canvas.clear();
+
         let new_time = Instant::now();
         let frame_time = new_time - current_time;
 
@@ -45,7 +48,7 @@ fn main() -> io::Result<()> {
         accumulator += frame_time.as_secs_f64();
 
         while accumulator >= DT {
-            if let Err(e) = update(t, DT, &mut current_position, &mut velocity) {
+            if let Err(e) = update(&sdl_context, t, DT, &mut current_position, &mut velocity) {
                 println!("{:?}", e);
                 break 'game_loop;
             }
@@ -53,7 +56,7 @@ fn main() -> io::Result<()> {
             t += DT;
         }
 
-        if let Err(e) = paint(current_position, fps_counter) {
+        if let Err(e) = paint(&mut canvas, current_position, fps_counter) {
             println!("{:?}", e);
             break 'game_loop;
         }
@@ -66,100 +69,88 @@ fn main() -> io::Result<()> {
         }
 
         thread::sleep(Duration::new(0, 1_000_000_000u32 / FPS));
-    }
-
-    execute!(stdout(), PopKeyboardEnhancementFlags)?;
-
-    disable_raw_mode()
+    };
 }
 
-fn update(t: f64, dt: f64, position: &mut [i32; 2], mut velocity: &mut [f64; 2]) -> io::Result<()> {
-    match read_keyboard_events() {
-        Ok((key_code, kind)) => {
-            println!("{:?}", kind);
-            if KeyEventKind::Press.eq(&kind) && KeyCode::Esc.eq(&key_code) {
+fn update(ctx: &Sdl, t: f64, dt: f64, position: &mut [i32; 2], mut velocity: &mut [f64; 2]) -> io::Result<()> {
+    let mut event_pump = ctx.event_pump().unwrap();
+
+    for event in event_pump.poll_iter() {
+        match event {
+            Event::Quit {..} |
+            Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                 return Err(io::Error::new(io::ErrorKind::Other, "Escape key pressed"));
-            } 
-            
-            if kind != KeyEventKind::Release {
+            },
+            Event::KeyDown { keycode: Some(key_code), .. } => {
                 update_velocity(key_code, &mut velocity, dt);
 
-                // Check better with out of bounds / move position to a player instance
                 position[0] = (position[0] + (velocity[0] * dt * 1000.0) as i32).min(MAP[1].len() as i32 - 1).max(0);
                 position[1] = (position[1] + (velocity[1] * dt * 1000.0) as i32).min(MAP[0].len() as i32 - 1).max(0);
-            } else {
+            }
+            Event::KeyUp { keycode: Some(Keycode::Up) | Some(Keycode::Down) | Some(Keycode::Left) | Some(Keycode::Right), ..} => {
                 velocity[0] = 0.0;
                 velocity[1] = 0.0;
             }
-           
+            _ => {}
+        }
+    };
 
-            Ok(())
-        },
-        Err(e) => Err(e)
-    }
+    Ok(())
 }
 
-fn update_velocity(key_code: KeyCode, velocity: &mut [f64; 2], dt: f64) {
+fn update_velocity(key_code: Keycode, velocity: &mut [f64; 2], dt: f64) {
     match key_code {
-        KeyCode::Up => {
+        Keycode::Up => {
             velocity[1] -= ACCELERATION * dt;
         },
-        KeyCode::Down => {
+        Keycode::Down => {
             velocity[1] += ACCELERATION * dt;
         },
-        KeyCode::Right => {
+        Keycode::Right => {
             velocity[0] += ACCELERATION * dt;
         },
-        KeyCode::Left => {
+        Keycode::Left => {
             velocity[0] -= ACCELERATION * dt;
         },
         _ => ()
     }
 }
 
-fn paint(position: [i32; 2], fps: u32) -> io::Result<()> {
-    let map_string = get_map_string(position);
+fn paint(canvas: &mut Canvas<sdl2::video::Window>, position: [i32; 2], fps: u32) -> io::Result<()> {
+    // let map_string = get_map_string(position);
 
-    execute!(
-        io::stdout(),
-        MoveTo(0, 0),
-        Clear(crossterm::terminal::ClearType::All),
-        SetForegroundColor(Color::Rgb { r: 255, g: 203, b: 164 }),
-        SetBackgroundColor(Color::Rgb { r: 19, g: 109, b : 21}),
-        Print(map_string),
-        MoveTo(0, 30), // Adjust the position as needed
-        Print(format!("FPS: {}", fps)),
-        ResetColor
-    )?;
-    
+    println!("{:?}", position);
+
+    canvas.set_draw_color(Color::RGB(255, 255, 255));
+    canvas.clear();
+
+    canvas.set_draw_color(Color::RGB(0, 0, 0)); // Set draw color to black
+    let center_rect = Rect::new(395, 295, 10, 10); // Create a rectangle at the center
+    canvas.fill_rect(center_rect);
+
+    let rect_x = position[0];
+    let rect_y = position[1];
+    let other_rect = Rect::new(rect_x, rect_y, 10, 10); // Create a rectangle next to the center
+    canvas.fill_rect(other_rect);
+
+    canvas.present(); // Present the changes to the screen
+
     Ok(())
 }
 
-fn get_map_string(position: [i32; 2]) -> String {
-    let mut map_string = String::new();
+// fn get_map_string(position: [i32; 2]) -> String {
+//     let mut map_string = String::new();
     
-    for y in 0..MAP.len() as i32 {
-        for x in 0..MAP[0].len() as i32 {
-            if [x, y] == position {
-                map_string.push_str(" • ");
-            } else {
-                map_string.push_str(MAP[x as usize][y as usize]);
-            }
-        }
-        map_string.push_str("\r\n");
-    }
+//     for y in 0..MAP.len() as i32 {
+//         for x in 0..MAP[0].len() as i32 {
+//             if [x, y] == position {
+//                 map_string.push_str(" • ");
+//             } else {
+//                 map_string.push_str(MAP[x as usize][y as usize]);
+//             }
+//         }
+//         map_string.push_str("\r\n");
+//     }
 
-    map_string
-}
-
-fn read_keyboard_events() -> io::Result<(KeyCode, KeyEventKind)> {
-    if poll(Duration::from_secs(0))? {
-        // It's guaranteed that the `read()` won't block when the `poll()`
-        // function returns `true`
-        if let Event::Key(key) = read()? {
-            return Ok((key.code, key.kind));
-        }
-    }
-
-    Ok((KeyCode::Null, KeyEventKind::Repeat))
-}
+//     map_string
+// }
