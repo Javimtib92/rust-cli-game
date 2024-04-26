@@ -1,8 +1,5 @@
 use std::{io::{self}, thread, time::{Duration, Instant}};
-
-mod map;
-use map::MAP;
-use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::{Point, Rect}, render::Canvas, Sdl};
+use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, Sdl};
 
 const FPS: u32 = 60;
 const FORCE: f64 = 2.0;
@@ -117,8 +114,6 @@ fn update_velocity(key_code: Keycode, velocity: &mut [f64; 2], dt: f64) {
 }
 
 fn paint(canvas: &mut Canvas<sdl2::video::Window>, position: [i32; 2], fps: u32) -> io::Result<()> {
-    // let map_string = get_map_string(position);
-
     println!("{:?}", position);
 
     canvas.set_draw_color(Color::RGB(255, 255, 255));
@@ -137,20 +132,3 @@ fn paint(canvas: &mut Canvas<sdl2::video::Window>, position: [i32; 2], fps: u32)
 
     Ok(())
 }
-
-// fn get_map_string(position: [i32; 2]) -> String {
-//     let mut map_string = String::new();
-    
-//     for y in 0..MAP.len() as i32 {
-//         for x in 0..MAP[0].len() as i32 {
-//             if [x, y] == position {
-//                 map_string.push_str(" • ");
-//             } else {
-//                 map_string.push_str(MAP[x as usize][y as usize]);
-//             }
-//         }
-//         map_string.push_str("\r\n");
-//     }
-
-//     map_string
-// }
