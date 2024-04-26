@@ -1,8 +1,8 @@
 use std::{io::{self}, thread, time::{Duration, Instant}};
-use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, Sdl};
+use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, ttf::Font, Sdl};
 
 const FPS: u32 = 60;
-const FORCE: f64 = 2.0;
+const FORCE: f64 = 10.0;
 const MASS: f64 = 0.5;
 const ACCELERATION: f64 = FORCE / MASS;
 const DT: f64 = 0.01;
@@ -23,12 +23,19 @@ fn main() {
     let mut current_position = [0, 0];
     let mut velocity = [0.0, 0.0];
     
+    let ttf_context = sdl2::ttf::init().map_err(|e: sdl2::ttf::InitError| e.to_string()).unwrap();
+    let current_dir = std::env::current_dir().unwrap();
+    let font_path = current_dir.join("src/fonts/Roboto-Regular.ttf");
+    let font_size = 48;
+
+    let font = ttf_context.load_font(font_path, font_size).unwrap();
 
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
-
+   
     let window = video_subsystem.window("rust-sdl2 demo", 800, 600)
         .position_centered()
+        .opengl()
         .build()
         .unwrap();
 
@@ -53,7 +60,7 @@ fn main() {
             t += DT;
         }
 
-        if let Err(e) = paint(&mut canvas, current_position, fps_counter) {
+        if let Err(e) = paint(&mut canvas, &font, current_position, fps_counter) {
             println!("{:?}", e);
             break 'game_loop;
         }
@@ -81,8 +88,8 @@ fn update(ctx: &Sdl, t: f64, dt: f64, position: &mut [i32; 2], mut velocity: &mu
             Event::KeyDown { keycode: Some(key_code), .. } => {
                 update_velocity(key_code, &mut velocity, dt);
 
-                position[0] = (position[0] + (velocity[0] * dt * 1000.0) as i32).min(MAP[1].len() as i32 - 1).max(0);
-                position[1] = (position[1] + (velocity[1] * dt * 1000.0) as i32).min(MAP[0].len() as i32 - 1).max(0);
+                position[0] = (position[0] + (velocity[0] * dt * 1000.0) as i32);
+                position[1] = (position[1] + (velocity[1] * dt * 1000.0) as i32);
             }
             Event::KeyUp { keycode: Some(Keycode::Up) | Some(Keycode::Down) | Some(Keycode::Left) | Some(Keycode::Right), ..} => {
                 velocity[0] = 0.0;
@@ -113,22 +120,58 @@ fn update_velocity(key_code: Keycode, velocity: &mut [f64; 2], dt: f64) {
     }
 }
 
-fn paint(canvas: &mut Canvas<sdl2::video::Window>, position: [i32; 2], fps: u32) -> io::Result<()> {
+fn paint(canvas: &mut Canvas<sdl2::video::Window>, font: &Font, position: [i32; 2], fps: u32) -> io::Result<()> {
     println!("{:?}", position);
 
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
 
-    canvas.set_draw_color(Color::RGB(0, 0, 0)); // Set draw color to black
-    let center_rect = Rect::new(395, 295, 10, 10); // Create a rectangle at the center
-    canvas.fill_rect(center_rect);
+    canvas.set_draw_color(Color::RGB(0, 0, 0));
 
+    draw_center_reference(canvas);
+    
+    draw_player(canvas, position);
+
+    draw_fps_counter(canvas, font, fps);
+
+    canvas.present();
+
+    Ok(())
+}
+
+fn draw_center_reference(canvas: &mut Canvas<sdl2::video::Window>) {
+    let center_rect = Rect::new(395, 295, 10, 10);
+    canvas.fill_rect(center_rect);
+}
+
+fn draw_player(canvas: &mut Canvas<sdl2::video::Window>, position: [i32; 2]) {
     let rect_x = position[0];
     let rect_y = position[1];
-    let other_rect = Rect::new(rect_x, rect_y, 10, 10); // Create a rectangle next to the center
+    let other_rect = Rect::new(rect_x, rect_y, 10, 10);
     canvas.fill_rect(other_rect);
+}
 
-    canvas.present(); // Present the changes to the screen
+fn draw_fps_counter(canvas: &mut Canvas<sdl2::video::Window>, font: &Font, fps: u32) -> io::Result<()>{
+    // Draw FPS counter
+    let texture_creator = canvas.texture_creator();
+    
+    let surface = font
+        .render(&format!("FPS: {}", fps))
+        .blended(Color::RGB(0, 0, 0))
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to render text: {}", e)))?;
+    let texture = texture_creator
+        .create_texture_from_surface(&surface)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to create texture: {}", e)))?;
+    let texture_query = texture.query();
+
+    let dst = Rect::new(
+        canvas.viewport().width() as i32 - texture_query.width as i32 - 10, // Offset from right edge
+        canvas.viewport().height() as i32 - texture_query.height as i32 - 10, // Offset from bottom edge
+        texture_query.width,
+        texture_query.height,
+    );
+
+    canvas.copy(&texture, None, dst).unwrap();
 
     Ok(())
 }
