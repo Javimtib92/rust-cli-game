@@ -8,7 +8,7 @@ This project is a fun project I'm building to play around with Rust while learni
 ## Install SLD2 on Mac
 
 ```bash
-brew install sdl2
+brew install sdl2 sdl2_ttf
 ```
 
 ## Project Goals
