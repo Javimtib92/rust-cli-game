@@ -1,3 +1,5 @@
+use crate::world::Direction;
+
 const FORCE: f64 = 10.0;
 const MASS: f64 = 0.5;
 
@@ -62,11 +64,7 @@ pub struct Position {
 
 impl Position {
     pub const fn new (x: f64, y: f64) -> Position {
-        Position {
-            x: 0.0,
-            y: 0.0
-        }
-       
+        Position { x, y }
     }
 
     pub fn get_x(&self) -> f64 {
@@ -85,12 +83,4 @@ impl Position {
     fn set_y(&mut self, y: f64) {
         self.y = y;
     }
-}
-
-#[derive(Debug, Clone)]
-pub enum Direction {
-    North,
-    South,
-    East,
-    West
 }

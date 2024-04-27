@@ -1,8 +1,10 @@
 use std::{io::{self}, thread, time::{Duration, Instant}};
 use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, ttf::Font, Sdl};
 
+mod world;
 mod character;
-use character::{Direction,Character, Position};
+use character::{Character, Position};
+use world::{Direction};
 
 const FPS: u32 = 60;
 const DT: f64 = 0.01;
