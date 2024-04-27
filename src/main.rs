@@ -1,10 +1,10 @@
 use std::{io::{self}, thread, time::{Duration, Instant}};
 use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, ttf::Font, Sdl};
 
+mod character;
+use character::{Direction,Character, Position};
+
 const FPS: u32 = 60;
-const FORCE: f64 = 10.0;
-const MASS: f64 = 0.5;
-const ACCELERATION: f64 = FORCE / MASS;
 const DT: f64 = 0.01;
 
 fn main() {
@@ -15,14 +15,12 @@ fn main() {
     let mut current_time = Instant::now();
     let mut accumulator = 0.0;
 
-
     let mut fps_counter = 0;
     let mut frames = 0;
     let mut last_fps_update = Instant::now();
 
-    let mut current_position = [0, 0];
-    let mut velocity = [0.0, 0.0];
-    
+    let mut player = Character::new(Position::new(0.0,0.0));
+
     let ttf_context = sdl2::ttf::init().map_err(|e: sdl2::ttf::InitError| e.to_string()).unwrap();
     let current_dir = std::env::current_dir().unwrap();
     let font_path = current_dir.join("src/fonts/Roboto-Regular.ttf");
@@ -52,7 +50,7 @@ fn main() {
         accumulator += frame_time.as_secs_f64();
 
         while accumulator >= DT {
-            if let Err(e) = update(&sdl_context, t, DT, &mut current_position, &mut velocity) {
+            if let Err(e) = update(&sdl_context, t, DT, &mut player) {
                 println!("{:?}", e);
                 break 'game_loop;
             }
@@ -60,7 +58,9 @@ fn main() {
             t += DT;
         }
 
-        if let Err(e) = paint(&mut canvas, &font, current_position, fps_counter) {
+        println!("Pos: {:?}, Direction: {:?}", player.get_position(), player.get_face_direction());
+
+        if let Err(e) = paint(&mut canvas, &font, player.get_position(), fps_counter) {
             println!("{:?}", e);
             break 'game_loop;
         }
@@ -76,7 +76,7 @@ fn main() {
     };
 }
 
-fn update(ctx: &Sdl, t: f64, dt: f64, position: &mut [i32; 2], mut velocity: &mut [f64; 2]) -> io::Result<()> {
+fn update(ctx: &Sdl, t: f64, dt: f64, player: &mut Character) -> io::Result<()> {
     let mut event_pump = ctx.event_pump().unwrap();
 
     for event in event_pump.poll_iter() {
@@ -86,14 +86,16 @@ fn update(ctx: &Sdl, t: f64, dt: f64, position: &mut [i32; 2], mut velocity: &mu
                 return Err(io::Error::new(io::ErrorKind::Other, "Escape key pressed"));
             },
             Event::KeyDown { keycode: Some(key_code), .. } => {
-                update_velocity(key_code, &mut velocity, dt);
-
-                position[0] = (position[0] + (velocity[0] * dt * 1000.0) as i32);
-                position[1] = (position[1] + (velocity[1] * dt * 1000.0) as i32);
+                match key_code {
+                    Keycode::Up => player.move_character(dt, Direction::North),
+                    Keycode::Down => player.move_character(dt, Direction::South),
+                    Keycode::Left => player.move_character(dt, Direction::West),
+                    Keycode::Right => player.move_character(dt, Direction::East),
+                    _ => ()
+                };
             }
             Event::KeyUp { keycode: Some(Keycode::Up) | Some(Keycode::Down) | Some(Keycode::Left) | Some(Keycode::Right), ..} => {
-                velocity[0] = 0.0;
-                velocity[1] = 0.0;
+                player.stop();
             }
             _ => {}
         }
@@ -102,27 +104,7 @@ fn update(ctx: &Sdl, t: f64, dt: f64, position: &mut [i32; 2], mut velocity: &mu
     Ok(())
 }
 
-fn update_velocity(key_code: Keycode, velocity: &mut [f64; 2], dt: f64) {
-    match key_code {
-        Keycode::Up => {
-            velocity[1] -= ACCELERATION * dt;
-        },
-        Keycode::Down => {
-            velocity[1] += ACCELERATION * dt;
-        },
-        Keycode::Right => {
-            velocity[0] += ACCELERATION * dt;
-        },
-        Keycode::Left => {
-            velocity[0] -= ACCELERATION * dt;
-        },
-        _ => ()
-    }
-}
-
-fn paint(canvas: &mut Canvas<sdl2::video::Window>, font: &Font, position: [i32; 2], fps: u32) -> io::Result<()> {
-    println!("{:?}", position);
-
+fn paint(canvas: &mut Canvas<sdl2::video::Window>, font: &Font, position: &Position, fps: u32) -> io::Result<()> {
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
 
@@ -144,10 +126,10 @@ fn draw_center_reference(canvas: &mut Canvas<sdl2::video::Window>) {
     canvas.fill_rect(center_rect);
 }
 
-fn draw_player(canvas: &mut Canvas<sdl2::video::Window>, position: [i32; 2]) {
-    let rect_x = position[0];
-    let rect_y = position[1];
-    let other_rect = Rect::new(rect_x, rect_y, 10, 10);
+fn draw_player(canvas: &mut Canvas<sdl2::video::Window>, position: &Position) {
+    let rect_x = position.get_x();
+    let rect_y = position.get_y();
+    let other_rect = Rect::new(rect_x as i32, rect_y as i32, 10, 10);
     canvas.fill_rect(other_rect);
 }
 
