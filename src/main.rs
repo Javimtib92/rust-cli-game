@@ -44,6 +44,13 @@ fn update(ctx: &Sdl, t: f64, dt: f64, player: &mut Character) -> io::Result<()> 
                     _ => (),
                 };
             }
+            Event::KeyUp {
+                keycode:
+                    Some(Keycode::Up) | Some(Keycode::Down) | Some(Keycode::Left) | Some(Keycode::Right),
+                ..
+            } => {
+                player.stop();
+            }
             _ => {}
         }
     }
