@@ -1,81 +1,21 @@
-use std::{io::{self}, thread, time::{Duration, Instant}};
+use std::io::{self};
 use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, ttf::Font, Sdl};
 
 mod world;
 mod character;
+mod game;
 use character::{Character, Position};
-use world::{Direction};
+use world::Direction;
 
-const FPS: u32 = 60;
-const DT: f64 = 0.01;
+use crate::game::Game;
 
 fn main() {
     println!("Welcome to the Rust CLI game");
 
-    let mut t = 0.0;
-
-    let mut current_time = Instant::now();
-    let mut accumulator = 0.0;
-
-    let mut fps_counter = 0;
-    let mut frames = 0;
-    let mut last_fps_update = Instant::now();
-
-    let mut player = Character::new(Position::new(0.0,0.0));
-
-    let ttf_context = sdl2::ttf::init().map_err(|e: sdl2::ttf::InitError| e.to_string()).unwrap();
-    let current_dir = std::env::current_dir().unwrap();
-    let font_path = current_dir.join("src/fonts/Roboto-Regular.ttf");
-    let font_size = 48;
-
-    let font = ttf_context.load_font(font_path, font_size).unwrap();
-
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
-   
-    let window = video_subsystem.window("rust-sdl2 demo", 800, 600)
-        .position_centered()
-        .opengl()
-        .build()
-        .unwrap();
-
-    let mut canvas = window.into_canvas().build().unwrap();
-
-    'game_loop: loop {
-        canvas.clear();
-
-        let new_time = Instant::now();
-        let frame_time = new_time - current_time;
-
-        current_time = new_time;
-
-        accumulator += frame_time.as_secs_f64();
-
-        while accumulator >= DT {
-            if let Err(e) = update(&sdl_context, t, DT, &mut player) {
-                println!("{:?}", e);
-                break 'game_loop;
-            }
-            accumulator -= DT;
-            t += DT;
-        }
-
-        println!("Pos: {:?}, Direction: {:?}", player.get_position(), player.get_face_direction());
-
-        if let Err(e) = paint(&mut canvas, &font, player.get_position(), fps_counter) {
-            println!("{:?}", e);
-            break 'game_loop;
-        }
-
-        frames += 1;
-        if current_time.duration_since(last_fps_update) >= Duration::from_secs(1) {
-            fps_counter = frames;
-            frames = 0;
-            last_fps_update = current_time;
-        }
-
-        thread::sleep(Duration::new(0, 1_000_000_000u32 / FPS));
-    };
+    Game::start(
+        move |t, dt, player, sdl_context| update(sdl_context, t, dt, player),
+        move | player, canvas, font, fps_counter | paint(canvas, font, player, fps_counter)
+    );
 }
 
 fn update(ctx: &Sdl, t: f64, dt: f64, player: &mut Character) -> io::Result<()> {
@@ -106,7 +46,7 @@ fn update(ctx: &Sdl, t: f64, dt: f64, player: &mut Character) -> io::Result<()> 
     Ok(())
 }
 
-fn paint(canvas: &mut Canvas<sdl2::video::Window>, font: &Font, position: &Position, fps: u32) -> io::Result<()> {
+fn paint(canvas: &mut Canvas<sdl2::video::Window>, font: &Font, player: &Character, fps: u32) -> io::Result<()> {
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
 
@@ -114,7 +54,7 @@ fn paint(canvas: &mut Canvas<sdl2::video::Window>, font: &Font, position: &Posit
 
     draw_center_reference(canvas);
     
-    draw_player(canvas, position);
+    draw_player(canvas, player.get_position());
 
     draw_fps_counter(canvas, font, fps);
 
