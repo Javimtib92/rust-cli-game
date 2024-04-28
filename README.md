@@ -1,4 +1,4 @@
-# Rust CLI Game
+# Rust Game
 
 This project is a fun project I'm building to play around with Rust while learning.
 
