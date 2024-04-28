@@ -15,7 +15,7 @@ brew install sdl2 sdl2_ttf
 - Learn the fundamentals of Rust programming language.
 - Gain practical experience by implementing various Rust concepts.
 - Explore Rust's unique features such as ownership, lifetimes, and pattern matching.
-- Build a small CLI game with Rust
+- Build a small game with Rust
 
 ## Getting Started
 To get started with the Learning Rust Project, follow these steps:
