@@ -2,11 +2,13 @@ use crate::world::Direction;
 
 const FORCE: f64 = 10.0;
 const MASS: f64 = 0.5;
+const MAX_SPEED: f64 = 1.5;
 
 #[derive(Debug, Clone)]
 pub struct Character {
     force: f64,
     mass: f64,
+    max_speed: f64,
     position: Position,
     face_direction: Direction,
     velocity: [f64; 2],
@@ -17,14 +19,19 @@ impl Character {
         Character {
             force: FORCE,
             mass: MASS,
+            max_speed: MAX_SPEED,
             position,
             face_direction: Direction::North,
             velocity: [0.0, 0.0],
         }
     }
 
-    pub fn move_character(&mut self, dt: f64, direction: Direction) {
-        self.face_direction = direction;
+    pub fn move_character(&mut self, direction: Direction, dt: f64) {
+        if direction != self.face_direction {
+            self.face_direction = direction;
+            self.velocity = [0.0, 0.0];
+        }
+
         self.update_velocity(dt);
 
         self.position
@@ -33,24 +40,31 @@ impl Character {
             .set_y(self.position.y + (self.velocity[1] * dt * 1000.0));
     }
 
-    pub fn stop(&mut self) {
-        self.velocity[0] = 0.0;
-        self.velocity[1] = 0.0;
-    }
-
     fn update_velocity(&mut self, dt: f64) {
         match self.face_direction {
             Direction::North => {
                 self.velocity[1] -= self.force / self.mass * dt;
+                if self.velocity[1] < -self.max_speed {
+                    self.velocity[1] = -self.max_speed;
+                }
             }
             Direction::South => {
                 self.velocity[1] += self.force / self.mass * dt;
+                if self.velocity[1] > self.max_speed {
+                    self.velocity[1] = self.max_speed;
+                }
             }
             Direction::East => {
                 self.velocity[0] += self.force / self.mass * dt;
+                if self.velocity[0] > self.max_speed {
+                    self.velocity[0] = self.max_speed;
+                }
             }
             Direction::West => {
                 self.velocity[0] -= self.force / self.mass * dt;
+                if self.velocity[0] < -self.max_speed {
+                    self.velocity[0] = -self.max_speed;
+                }
             }
         }
     }

@@ -1,8 +1,4 @@
-use std::{
-    io::{self},
-    thread,
-    time::{Duration, Instant},
-};
+use std::{io::{self}, thread, time::{Duration, Instant}};
 
 use sdl2::{render::Canvas, ttf::Font, video::Window, Sdl};
 
@@ -11,7 +7,9 @@ use crate::character::{Character, Position};
 const FPS: u32 = 60;
 const DT: f64 = 0.01;
 
-pub struct Game {}
+pub struct Game {
+
+}
 
 impl Game {
     pub fn start<FUpdate, FPaint>(mut update: FUpdate, mut paint: FPaint)
@@ -19,9 +17,8 @@ impl Game {
         FUpdate: FnMut(f64, f64, &mut Character, &Sdl) -> io::Result<()>,
         FPaint: FnMut(&mut Character, &mut Canvas<Window>, &Font, u32) -> io::Result<()>,
     {
-        let ttf_context = sdl2::ttf::init()
-            .map_err(|e: sdl2::ttf::InitError| e.to_string())
-            .unwrap();
+
+        let ttf_context = sdl2::ttf::init().map_err(|e: sdl2::ttf::InitError| e.to_string()).unwrap();
         let current_dir = std::env::current_dir().unwrap();
         let font_path = current_dir.join("src/fonts/Roboto-Regular.ttf");
         let font_size = 48;
@@ -30,9 +27,8 @@ impl Game {
 
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
-
-        let window = video_subsystem
-            .window("rust-sdl2 demo", 800, 600)
+    
+        let window = video_subsystem.window("rust-sdl2 demo", 800, 600)
             .position_centered()
             .opengl()
             .build()
@@ -40,7 +36,7 @@ impl Game {
 
         let mut canvas = window.into_canvas().build().unwrap();
 
-        let mut player = Character::new(Position::new(0.0, 0.0));
+        let mut player = Character::new(Position::new(0.0,0.0));
 
         let mut t = 0.0;
 
@@ -50,6 +46,7 @@ impl Game {
         let mut fps_counter = 0;
         let mut frames = 0;
         let mut last_fps_update = Instant::now();
+
 
         'game_loop: loop {
             let new_time = Instant::now();

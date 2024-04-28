@@ -37,19 +37,12 @@ fn update(ctx: &Sdl, t: f64, dt: f64, player: &mut Character) -> io::Result<()> 
                 ..
             } => {
                 match key_code {
-                    Keycode::Up => player.move_character(dt, Direction::North),
-                    Keycode::Down => player.move_character(dt, Direction::South),
-                    Keycode::Left => player.move_character(dt, Direction::West),
-                    Keycode::Right => player.move_character(dt, Direction::East),
+                    Keycode::Up => player.move_character(Direction::North, dt),
+                    Keycode::Down => player.move_character(Direction::South, dt),
+                    Keycode::Left => player.move_character(Direction::West, dt),
+                    Keycode::Right => player.move_character(Direction::East, dt),
                     _ => (),
                 };
-            }
-            Event::KeyUp {
-                keycode:
-                    Some(Keycode::Up) | Some(Keycode::Down) | Some(Keycode::Left) | Some(Keycode::Right),
-                ..
-            } => {
-                player.stop();
             }
             _ => {}
         }
