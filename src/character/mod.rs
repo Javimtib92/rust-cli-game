@@ -9,22 +9,30 @@ pub struct Character {
     mass: f64,
     position: Position,
     face_direction: Direction,
-    velocity: [f64; 2]
+    velocity: [f64; 2],
 }
 
 impl Character {
     pub const fn new(position: Position) -> Character {
-        Character { force: FORCE, mass: MASS, position, face_direction: Direction::North, velocity: [0.0, 0.0] }
+        Character {
+            force: FORCE,
+            mass: MASS,
+            position,
+            face_direction: Direction::North,
+            velocity: [0.0, 0.0],
+        }
     }
 
     pub fn move_character(&mut self, dt: f64, direction: Direction) {
         self.face_direction = direction;
         self.update_velocity(dt);
 
-        self.position.set_x(self.position.x + (self.velocity[0] * dt * 1000.0));
-        self.position.set_y(self.position.y + (self.velocity[1] * dt * 1000.0));
+        self.position
+            .set_x(self.position.x + (self.velocity[0] * dt * 1000.0));
+        self.position
+            .set_y(self.position.y + (self.velocity[1] * dt * 1000.0));
     }
-    
+
     pub fn stop(&mut self) {
         self.velocity[0] = 0.0;
         self.velocity[1] = 0.0;
@@ -34,13 +42,13 @@ impl Character {
         match self.face_direction {
             Direction::North => {
                 self.velocity[1] -= self.force / self.mass * dt;
-            },
+            }
             Direction::South => {
                 self.velocity[1] += self.force / self.mass * dt;
-            },
+            }
             Direction::East => {
                 self.velocity[0] += self.force / self.mass * dt;
-            },
+            }
             Direction::West => {
                 self.velocity[0] -= self.force / self.mass * dt;
             }
@@ -59,18 +67,17 @@ impl Character {
 #[derive(Debug, Clone)]
 pub struct Position {
     x: f64,
-    y: f64
+    y: f64,
 }
 
 impl Position {
-    pub const fn new (x: f64, y: f64) -> Position {
+    pub const fn new(x: f64, y: f64) -> Position {
         Position { x, y }
     }
 
     pub fn get_x(&self) -> f64 {
         self.x
     }
-
 
     pub fn get_y(&self) -> f64 {
         self.y

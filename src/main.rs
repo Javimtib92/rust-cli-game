@@ -1,9 +1,11 @@
+use sdl2::{
+    event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, ttf::Font, Sdl,
+};
 use std::io::{self};
-use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, ttf::Font, Sdl};
 
-mod world;
 mod character;
 mod game;
+mod world;
 use character::{Character, Position};
 use world::Direction;
 
@@ -14,7 +16,7 @@ fn main() {
 
     Game::start(
         move |t, dt, player, sdl_context| update(sdl_context, t, dt, player),
-        move | player, canvas, font, fps_counter | paint(canvas, font, player, fps_counter)
+        move |player, canvas, font, fps_counter| paint(canvas, font, player, fps_counter),
     );
 }
 
@@ -23,37 +25,52 @@ fn update(ctx: &Sdl, t: f64, dt: f64, player: &mut Character) -> io::Result<()> 
 
     for event in event_pump.poll_iter() {
         match event {
-            Event::Quit {..} |
-            Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+            Event::Quit { .. }
+            | Event::KeyDown {
+                keycode: Some(Keycode::Escape),
+                ..
+            } => {
                 return Err(io::Error::new(io::ErrorKind::Other, "Escape key pressed"));
-            },
-            Event::KeyDown { keycode: Some(key_code), .. } => {
+            }
+            Event::KeyDown {
+                keycode: Some(key_code),
+                ..
+            } => {
                 match key_code {
                     Keycode::Up => player.move_character(dt, Direction::North),
                     Keycode::Down => player.move_character(dt, Direction::South),
                     Keycode::Left => player.move_character(dt, Direction::West),
                     Keycode::Right => player.move_character(dt, Direction::East),
-                    _ => ()
+                    _ => (),
                 };
             }
-            Event::KeyUp { keycode: Some(Keycode::Up) | Some(Keycode::Down) | Some(Keycode::Left) | Some(Keycode::Right), ..} => {
+            Event::KeyUp {
+                keycode:
+                    Some(Keycode::Up) | Some(Keycode::Down) | Some(Keycode::Left) | Some(Keycode::Right),
+                ..
+            } => {
                 player.stop();
             }
             _ => {}
         }
-    };
+    }
 
     Ok(())
 }
 
-fn paint(canvas: &mut Canvas<sdl2::video::Window>, font: &Font, player: &Character, fps: u32) -> io::Result<()> {
+fn paint(
+    canvas: &mut Canvas<sdl2::video::Window>,
+    font: &Font,
+    player: &Character,
+    fps: u32,
+) -> io::Result<()> {
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
 
     canvas.set_draw_color(Color::RGB(0, 0, 0));
 
     draw_center_reference(canvas);
-    
+
     draw_player(canvas, player.get_position());
 
     draw_fps_counter(canvas, font, fps);
@@ -75,17 +92,31 @@ fn draw_player(canvas: &mut Canvas<sdl2::video::Window>, position: &Position) {
     canvas.fill_rect(other_rect);
 }
 
-fn draw_fps_counter(canvas: &mut Canvas<sdl2::video::Window>, font: &Font, fps: u32) -> io::Result<()>{
+fn draw_fps_counter(
+    canvas: &mut Canvas<sdl2::video::Window>,
+    font: &Font,
+    fps: u32,
+) -> io::Result<()> {
     // Draw FPS counter
     let texture_creator = canvas.texture_creator();
-    
+
     let surface = font
         .render(&format!("FPS: {}", fps))
         .blended(Color::RGB(0, 0, 0))
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to render text: {}", e)))?;
+        .map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to render text: {}", e),
+            )
+        })?;
     let texture = texture_creator
         .create_texture_from_surface(&surface)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to create texture: {}", e)))?;
+        .map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to create texture: {}", e),
+            )
+        })?;
     let texture_query = texture.query();
 
     let dst = Rect::new(
