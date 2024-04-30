@@ -1,12 +1,8 @@
-use sdl2::{
-    event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, ttf::Font, Sdl,
-};
-use std::io::{self};
-
+use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, ttf::Font};
 mod character;
 mod game;
 mod world;
-use character::{Character, Position};
+use character::Position;
 use world::Direction;
 
 use crate::game::Game;
@@ -14,14 +10,12 @@ use crate::game::Game;
 fn main() {
     println!("Welcome to the Rust CLI game");
 
-    Game::start(
-        move |t, dt, player, sdl_context| update(sdl_context, t, dt, player),
-        move |player, canvas, font, fps_counter| paint(canvas, font, player, fps_counter),
-    );
+    Game::new().start(|game, t, dt| update(game, t, dt), |game| paint(game));
 }
 
-fn update(ctx: &Sdl, t: f64, dt: f64, player: &mut Character) -> io::Result<()> {
-    let mut event_pump = ctx.event_pump().unwrap();
+fn update(game: &mut Game, _t: f64, dt: f64) -> Result<(), String> {
+    let mut event_pump = game.sdl_context.event_pump().unwrap();
+    let player = &mut game.player;
 
     for event in event_pump.poll_iter() {
         match event {
@@ -30,7 +24,7 @@ fn update(ctx: &Sdl, t: f64, dt: f64, player: &mut Character) -> io::Result<()> 
                 keycode: Some(Keycode::Escape),
                 ..
             } => {
-                return Err(io::Error::new(io::ErrorKind::Other, "Escape key pressed"));
+                return Err(String::from("Escape key pressed"));
             }
             Event::KeyDown {
                 keycode: Some(key_code),
@@ -58,65 +52,63 @@ fn update(ctx: &Sdl, t: f64, dt: f64, player: &mut Character) -> io::Result<()> 
     Ok(())
 }
 
-fn paint(
-    canvas: &mut Canvas<sdl2::video::Window>,
-    font: &Font,
-    player: &Character,
-    fps: u32,
-) -> io::Result<()> {
+fn paint(game: &mut Game) -> Result<(), String> {
+    let canvas = &mut game.canvas;
+    let position = game.player.get_position();
+    let current_dir = std::env::current_dir().unwrap();
+    let font_path = current_dir.join("src/fonts/Roboto-Regular.ttf");
+    let font_size = 48;
+
+    let font = game.ttf_context.load_font(font_path, font_size).unwrap();
+
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
 
     canvas.set_draw_color(Color::RGB(0, 0, 0));
 
-    draw_center_reference(canvas);
+    draw_center_reference(canvas)?;
 
-    draw_player(canvas, player.get_position());
+    draw_box(canvas, position)?;
 
-    draw_fps_counter(canvas, font, fps);
+    draw_fps_counter(canvas, &font, game.fps_counter)?;
 
     canvas.present();
 
     Ok(())
 }
 
-fn draw_center_reference(canvas: &mut Canvas<sdl2::video::Window>) {
+fn draw_center_reference(canvas: &mut Canvas<sdl2::video::Window>) -> Result<(), String> {
     let center_rect = Rect::new(395, 295, 10, 10);
-    canvas.fill_rect(center_rect);
+
+    canvas.fill_rect(center_rect)?;
+
+    Ok(())
 }
 
-fn draw_player(canvas: &mut Canvas<sdl2::video::Window>, position: &Position) {
+fn draw_box(canvas: &mut Canvas<sdl2::video::Window>, position: &Position) -> Result<(), String> {
     let rect_x = position.get_x();
     let rect_y = position.get_y();
     let other_rect = Rect::new(rect_x as i32, rect_y as i32, 10, 10);
-    canvas.fill_rect(other_rect);
+
+    canvas.fill_rect(other_rect)?;
+
+    Ok(())
 }
 
 fn draw_fps_counter(
     canvas: &mut Canvas<sdl2::video::Window>,
     font: &Font,
-    fps: u32,
-) -> io::Result<()> {
-    // Draw FPS counter
+    fps: i32,
+) -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
 
     let surface = font
         .render(&format!("FPS: {}", fps))
         .blended(Color::RGB(0, 0, 0))
-        .map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("Failed to render text: {}", e),
-            )
-        })?;
+        .map_err(|e| format!("Failed to render text: {}", e))?;
     let texture = texture_creator
         .create_texture_from_surface(&surface)
-        .map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("Failed to create texture: {}", e),
-            )
-        })?;
+        .map_err(|e| format!("Failed to create texture: {}", e))?;
     let texture_query = texture.query();
 
     let dst = Rect::new(

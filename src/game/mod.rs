@@ -1,32 +1,28 @@
 use std::{
-    io::{self},
     thread,
     time::{Duration, Instant},
 };
 
-use sdl2::{render::Canvas, ttf::Font, video::Window, Sdl};
+use sdl2::{render::Canvas, ttf::Sdl2TtfContext, video::Window, Sdl};
 
 use crate::character::{Character, Position};
 
 const FPS: u32 = 60;
 const DT: f64 = 0.01;
 
-pub struct Game {}
+pub struct Game {
+    pub sdl_context: Sdl,
+    pub canvas: Canvas<Window>,
+    pub player: Character,
+    pub ttf_context: Sdl2TtfContext,
+    pub fps_counter: i32,
+}
 
 impl Game {
-    pub fn start<FUpdate, FPaint>(mut update: FUpdate, mut paint: FPaint)
-    where
-        FUpdate: FnMut(f64, f64, &mut Character, &Sdl) -> io::Result<()>,
-        FPaint: FnMut(&mut Character, &mut Canvas<Window>, &Font, u32) -> io::Result<()>,
-    {
+    pub fn new() -> Self {
         let ttf_context = sdl2::ttf::init()
             .map_err(|e: sdl2::ttf::InitError| e.to_string())
             .unwrap();
-        let current_dir = std::env::current_dir().unwrap();
-        let font_path = current_dir.join("src/fonts/Roboto-Regular.ttf");
-        let font_size = 48;
-
-        let font = ttf_context.load_font(font_path, font_size).unwrap();
 
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
@@ -38,21 +34,34 @@ impl Game {
             .build()
             .unwrap();
 
-        let mut canvas = window.into_canvas().build().unwrap();
+        let canvas = window.into_canvas().build().unwrap();
 
         let initial_position = Position::new(0.0, 0.0);
-        let mut player = Character::builder(initial_position)
+        let player = Character::builder(initial_position)
             .with_force(5.0)
             .with_mass(1.0)
             .with_max_speed(1.5)
             .build();
 
+        Game {
+            sdl_context,
+            canvas,
+            player,
+            ttf_context,
+            fps_counter: 0,
+        }
+    }
+
+    pub fn start<FOnUpdate, FOnPaint>(mut self, mut on_update: FOnUpdate, mut on_paint: FOnPaint)
+    where
+        FOnUpdate: FnMut(&mut Self, f64, f64) -> Result<(), String>,
+        FOnPaint: FnMut(&mut Self) -> Result<(), String>,
+    {
         let mut t = 0.0;
 
         let mut current_time = Instant::now();
         let mut accumulator = 0.0;
 
-        let mut fps_counter = 0;
         let mut frames = 0;
         let mut last_fps_update = Instant::now();
 
@@ -65,22 +74,22 @@ impl Game {
             accumulator += frame_time.as_secs_f64();
 
             while accumulator >= DT {
-                if let Err(e) = update(t, DT, &mut player, &sdl_context) {
-                    println!("{:?}", e);
+                if let Err(e) = on_update(&mut self, t, DT) {
+                    println!("{e}");
                     break 'game_loop;
                 }
                 accumulator -= DT;
                 t += DT;
             }
 
-            if let Err(e) = paint(&mut player, &mut canvas, &font, fps_counter) {
-                println!("{:?}", e);
+            if let Err(e) = on_paint(&mut self) {
+                println!("{e}");
                 break 'game_loop;
             }
 
             frames += 1;
             if current_time.duration_since(last_fps_update) >= Duration::from_secs(1) {
-                fps_counter = frames;
+                self.fps_counter = frames;
                 frames = 0;
                 last_fps_update = current_time;
             }

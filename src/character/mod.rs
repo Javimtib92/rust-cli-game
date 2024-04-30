@@ -6,6 +6,18 @@ mod constants {
     pub const DEFAULT_MAX_SPEED: f64 = 1.5;
 }
 
+#[derive(Debug, Clone, Copy)]
+struct Velocity {
+    x: f64,
+    y: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Position {
+    x: f64,
+    y: f64,
+}
+
 #[derive(Debug, Clone)]
 pub struct Character {
     force: f64,
@@ -14,12 +26,6 @@ pub struct Character {
     position: Position,
     face_direction: Direction,
     velocity: Velocity,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct Velocity {
-    x: f64,
-    y: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -115,16 +121,6 @@ impl Character {
     pub fn get_position(&self) -> &Position {
         &self.position
     }
-
-    pub fn get_face_direction(&self) -> &Direction {
-        &self.face_direction
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Position {
-    x: f64,
-    y: f64,
 }
 
 impl Position {
